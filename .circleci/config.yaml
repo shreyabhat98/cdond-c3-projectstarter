@@ -1,0 +1,21 @@
+version: 2.1
+
+            
+jobs:
+  build-frontend:
+    docker:
+      - image: circleci/node:13.8.0
+    
+
+  build-backend:
+    docker:
+      - image: circleci/node:13.8.0
+  
+  
+
+workflows:
+  default:
+    jobs:
+      - build-frontend
+      - build-backend
+      
