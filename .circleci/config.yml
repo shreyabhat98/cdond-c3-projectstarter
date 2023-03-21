@@ -6,7 +6,8 @@
 #and also have presentation for CI/CD
 
 version: 2.1
-
+orbs:   #steps for connect slack email and massage 
+  slack: circleci/slack@4.10.1
 commands:
 
   install_ansible: #we will install ansible 
@@ -42,7 +43,7 @@ commands:
           name: Revert migrations
           when: on_fail
           command: |
-            SUCCESS=$(curl --insecure  https://kvdb.io/QKLPKb7NtNNtGNbQL6QPPE/migration_<< parameters.Workflow_ID >>)
+            SUCCESS=$(curl --insecure  https://kvdb.io/Up68KQvVZCMC32AM4i2mJR/migration_<< parameters.Workflow_ID >>)
             # Logic for reverting the database state
             if (( $SUCCESS == 1 ));
             then
@@ -144,7 +145,11 @@ jobs: #now we will bbuild our jobs
             npm install oauth-sign@^0.9.0
             npm audit fix --audit-level=critical
             #npm audit --audit-level=critical
-      
+      - slack/notify:
+          channel: project-give-your-application-auto-deploy-superpowersdone
+          event: fail
+          template: basic_fail_1
+
   scan-backend: # create scan-backend
     docker:
       - image: cimg/node:13.8.0
@@ -161,7 +166,10 @@ jobs: #now we will bbuild our jobs
             npm audit fix --force --audit-level=critical
             npm audit fix --force --audit-level=critical
             #npm audit --audit-level=critical
-     
+      - slack/notify:
+          channel: project-give-your-application-auto-deploy-superpowersdone
+          event: fail
+          template: basic_fail_1
 
   deploy-infrastructure: # create deploy-infrastructure
     docker:
@@ -203,42 +211,25 @@ jobs: #now we will bbuild our jobs
             - project/.circleci/ansible/inventory.txt
       - destroy-environment
 
-  configure-infrastructure:
+  configure-infrastructure:  # create configure-infrastructure
     docker:
-      # Docker image that supports Ansible
       - image: python:3.7-alpine3.11
     steps:
       - checkout
-      - add_ssh_keys:
-          fingerprints: ["ab:3e:93:98:14:00:f0:37:6e:f4:28:9c:fe:7f:cc:33"]
+      - run: apk add --update tar gzip
       - attach_workspace:
           at: ~/
+      - add_ssh_keys:
+          fingerprints: ["f8:90:86:da:c9:69:28:c3:ef:61:2a:f5:d8:a5:cc:2e"]
       - run:
           name: Install dependencies
           command: |
-            apk add --update ansible openssh-client tar gzip curl nodejs npm
-            pip install awscli
-            cat .circleci/ansible/inventory.txt
+            apk add --update ansible
       - run:
           name: Configure server
           command: |
-            cd backend
-            echo ENVIRONMENT=production > ".env"
-            echo TYPEORM_CONNECTION=postgres >> ".env"
-            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> ".env"
-            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> ".env"
-            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> ".env"
-            echo NODE_ENV=production >> ".env"
-            echo TYPEORM_HOST=$TYPEORM_HOST >> ".env"
-            echo TYPEORM_PORT=$TYPEORM_PORT >> ".env"
-            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> ".env"
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> ".env"
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> ".env"
-            cd ..
-            export ANSIBLE_HOST_KEY_CHECKING=False
-            ansible-playbook \
-              -i .circleci/ansible/inventory.txt \
-              .circleci/ansible/configure-server.yml
+            ansible-playbook .circleci/ansible/configure-server.yml -i .circleci/ansible/inventory.txt
+      - destroy-environment
 
   run-migrations: # create run-migrations
     docker:
@@ -256,44 +247,20 @@ jobs: #now we will bbuild our jobs
             unzip awscliv2.zip
             sudo ./aws/install     
       - run:
-          name: Run DB migrations
+          name: Run migrations
           command: |
-            echo    ENVIRONMENT=production                                 > "backend/.env"
-            echo    TYPEORM_CONNECTION=postgres                            >> "backend/.env"
-            echo    TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts   >> "backend/.env"
-            echo    TYPEORM_MIGRATIONS=./src/migrations/*.ts               >> "backend/.env"
-            echo    TYPEORM_MIGRATIONS_DIR=./src/migrations                >> "backend/.env"
-            echo    NODE_ENV=production                                    >> "backend/.env"
-            echo    TYPEORM_HOST=$TYPEORM_HOST                             >> "backend/.env"
-            echo    TYPEORM_PORT=$TYPEORM_PORT                             >> "backend/.env"
-            echo    TYPEORM_USERNAME=$TYPEORM_USERNAME                     >> "backend/.env"
-            echo    TYPEORM_PASSWORD=$TYPEORM_PASSWORD                     >> "backend/.env"
-            echo    TYPEORM_DATABASE=$TYPEORM_DATABASE                     >> "backend/.env"
-            cd backend
-            #npm install typescript
-            npm install --force   
-            echo 'Migrations' > migrations_dump.txt  
-            #sudo npm run migrations > migrations_dump.txt
-            #cat migrations_dump.txt
-                     
-          no_output_timeout: 30m
-          #name: Run migrations
-          #command: |
-           # export TYPEORM_HOST=$(aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text)
-            #
-            #cd backend 
-            #npm install      
-            #npm run migrations 2>&1 | tee migrations_dump.txt
-            #npm run migrations > migrations_dump.txt
-           
+            cd backend 
+            npm install      
+            npm run migrations > migrations_dump.txt
+            cat migrations_dump.txt
 
       - run: 
           name: Send Migration Results to kvdb.io
           command: |
             if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
             then
-              # If you are using kvdb.io, generate the bucket ID "QKLPKb7NtNNtGNbQL6QPPE" in your local terminal first
-              curl -d '1' https://kvdb.io/QKLPKb7NtNNtGNbQL6QPPE/migration_${CIRCLE_WORKFLOW_ID:0:7}  
+              # If you are using kvdb.io, generate the bucket ID "Up68KQvVZCMC32AM4i2mJR" in your local terminal first
+              curl -d '1' https://kvdb.io/Up68KQvVZCMC32AM4i2mJR/migration_${CIRCLE_WORKFLOW_ID:0:7}  
             fi
       - revert-migrations
       - destroy-environment
@@ -331,60 +298,57 @@ jobs: #now we will bbuild our jobs
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
       - destroy-environment
 
-  deploy-backend:
+  deploy-backend: # create deploy-backend
     docker:
-      - image: python:3.7-alpine3.11
+      - image: cimg/python:3.10
     steps:
       - checkout
+      - run: sudo apt-get install tar gzip -y
+      - run: 
+          name: Install aws_cli
+          command: |
+            #test
+            sudo apt-get update && sudo apt-get install -yy less
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install    
+      - install_ansible
+      - install_nodejs
       - add_ssh_keys:
-          fingerprints: ["ab:3e:93:98:14:00:f0:37:6e:f4:28:9c:fe:7f:cc:33"]
+          fingerprints: ["f8:90:86:da:c9:69:28:c3:ef:61:2a:f5:d8:a5:cc:2e"]
       - attach_workspace:
           at: ~/
       - restore_cache:
-          keys: ['backend-build']
+          keys: [backend-deps]
       - run:
-          name: Install dependencies
+          name:
           command: |
-            apk add --update ansible openssh-client tar gzip
+            cd backend
+            npm install
       - run:
-          name: Upzip the Backend code
+          name: Package backend
           command: |
-            cd /home/circleci/project
-            echo    ENVIRONMENT=production                                 > "backend/.env"
-            echo    TYPEORM_CONNECTION=postgres                            >> "backend/.env"
-            echo    TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts   >> "backend/.env"
-            echo    TYPEORM_MIGRATIONS=./src/migrations/*.ts               >> "backend/.env"
-            echo    TYPEORM_MIGRATIONS_DIR=./src/migrations                >> "backend/.env"
-            echo    NODE_ENV=production                                    >> "backend/.env"
-            echo    TYPEORM_HOST=$TYPEORM_HOST                             >> "backend/.env"
-            echo    TYPEORM_PORT=$TYPEORM_PORT                             >> "backend/.env"
-            echo    TYPEORM_USERNAME=$TYPEORM_USERNAME                     >> "backend/.env"
-            echo    TYPEORM_PASSWORD=$TYPEORM_PASSWORD                     >> "backend/.env"
-            echo    TYPEORM_DATABASE=$TYPEORM_DATABASE                     >> "backend/.env"
-            echo
-            cat backend/.env
-            echo
-            tar czf backend.tar.gz -P backend
-            cp backend.tar.gz /home
-            ls /home
+            cd backend
+            npm run build
+            tar -czvf artifact.tar.gz dist/* package*
+
+            cd .. 
+            cp backend/artifact.tar.gz .circleci/ansible/roles/deploy/files
+            
       - run:
           name: Deploy backend
           command: |
-            export ANSIBLE_HOST_KEY_CHECKING=False
-            ansible-playbook \
-            -i .circleci/ansible/inventory.txt \
-            .circleci/ansible/deploy-backend.yml
-      - run:
-          name: Install AWS CLI for rollback
-          when: on_fail
-          command: |
-            apk add --update py3-pip && pip3 install --upgrade pip && pip3 install awscli
-      - revert-migrations
-      - destroy-environment
-      
+            export TYPEORM_MIGRATIONS_DIR=./migrations
+            export TYPEORM_ENTITIES=./modules/domain/**/*.entity{.ts,.js}
+            export TYPEORM_MIGRATIONS=./migrations/*.ts
 
-      
-
+            cd .circleci/ansible
+            echo "Contents  of the inventory file is -------"
+            cat inventory.txt
+            ansible-playbook -i inventory.txt deploy-backend.yml
+            
+      - destroy-environment   
+      - revert-migrations 
   smoke-test: # createe smoke-test
     docker:
       - image: amazon/aws-cli
@@ -395,16 +359,18 @@ jobs: #now we will bbuild our jobs
           command: |
             yum install -y curl
            
-      
       - run:
           name: Backend smoke test.
           command: |
             export BACKEND_IP=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicIpAddress' --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" --output text)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "API_URL = ${API_URL}"
-           # curl -s ${API_URL}/api/status 
-            
-    
+            if curl "${API_URL}/api/status" | grep "ok"
+            then
+                exit 0
+            else
+                exit 1
+            fi
       - run:
           name: Frontend smoke test.
           command: |
@@ -418,7 +384,6 @@ jobs: #now we will bbuild our jobs
             fi 
       - destroy-environment 
       - revert-migrations
-
   cloudfront-update: # create cloudfront-update
     docker:
       - image: amazon/aws-cli
@@ -430,7 +395,7 @@ jobs: #now we will bbuild our jobs
             yum install -y curl
             export OLD_WORKFLOW_ID=$(aws cloudformation list-exports --query "Exports[?Name==\`WorkflowID\`].Value" --no-paginate --output text)
             echo "Old Wokflow ID: $OLD_WORKFLOW_ID"
-            curl https://kvdb.io/QKLPKb7NtNNtGNbQL6QPPE/old_workflow_id-2 -d "${CIRCLE_WORKFLOW_ID:0:7}"
+            curl https://kvdb.io/Up68KQvVZCMC32AM4i2mJR/old_workflow_id-2 -d "${CIRCLE_WORKFLOW_ID:0:7}"
       - run:
           name: Update cloudfront distribution
           command: |
