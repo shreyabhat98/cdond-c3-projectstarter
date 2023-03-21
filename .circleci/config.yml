@@ -332,8 +332,10 @@ jobs: #now we will bbuild our jobs
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
             unzip awscliv2.zip
             sudo ./aws/install    
-      - install_ansible
-      - install_nodejs
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible openssh-client tar gzip
       - add_ssh_keys:
           fingerprints: ["ab:3e:93:98:14:00:f0:37:6e:f4:28:9c:fe:7f:cc:33"]
       - attach_workspace:
