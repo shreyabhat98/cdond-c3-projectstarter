@@ -43,7 +43,7 @@ commands:
           name: Revert migrations
           when: on_fail
           command: |
-            SUCCESS=$(curl --insecure  https://kvdb.io/Up68KQvVZCMC32AM4i2mJR/migration_<< parameters.Workflow_ID >>)
+            SUCCESS=$(curl --insecure  https://kvdb.io/QKLPKb7NtNNtGNbQL6QPPE/migration_<< parameters.Workflow_ID >>)
             # Logic for reverting the database state
             if (( $SUCCESS == 1 ));
             then
@@ -220,7 +220,7 @@ jobs: #now we will bbuild our jobs
       - attach_workspace:
           at: ~/
       - add_ssh_keys:
-          fingerprints: ["f8:90:86:da:c9:69:28:c3:ef:61:2a:f5:d8:a5:cc:2e"]
+          fingerprints: ["ab:3e:93:98:14:00:f0:37:6e:f4:28:9c:fe:7f:cc:33"]
       - run:
           name: Install dependencies
           command: |
@@ -259,8 +259,8 @@ jobs: #now we will bbuild our jobs
           command: |
             if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
             then
-              # If you are using kvdb.io, generate the bucket ID "Up68KQvVZCMC32AM4i2mJR" in your local terminal first
-              curl -d '1' https://kvdb.io/Up68KQvVZCMC32AM4i2mJR/migration_${CIRCLE_WORKFLOW_ID:0:7}  
+              # If you are using kvdb.io, generate the bucket ID "QKLPKb7NtNNtGNbQL6QPPE" in your local terminal first
+              curl -d '1' https://kvdb.io/QKLPKb7NtNNtGNbQL6QPPE/migration_${CIRCLE_WORKFLOW_ID:0:7}  
             fi
       - revert-migrations
       - destroy-environment
@@ -315,7 +315,7 @@ jobs: #now we will bbuild our jobs
       - install_ansible
       - install_nodejs
       - add_ssh_keys:
-          fingerprints: ["f8:90:86:da:c9:69:28:c3:ef:61:2a:f5:d8:a5:cc:2e"]
+          fingerprints: ["ab:3e:93:98:14:00:f0:37:6e:f4:28:9c:fe:7f:cc:33"]
       - attach_workspace:
           at: ~/
       - restore_cache:
