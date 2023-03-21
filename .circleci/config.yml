@@ -1,9 +1,7 @@
 #this is Project: Give Your Application Auto-Deploy Superpowers CI/CD
-#create by: aya rabih mostafa 
-#date :october
-#this project have all scren for error
-#and also PDF have all steps I tried to explain it 
-#and also have presentation for CI/CD
+#create by: Sshreya
+#date : March
+
 
 version: 2.1
 orbs:   #steps for connect slack email and massage 
