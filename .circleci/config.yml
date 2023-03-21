@@ -233,7 +233,7 @@ jobs: #now we will bbuild our jobs
 
   run-migrations: # create run-migrations
     docker:
-      - image: cimg/node:13.8.0
+      - image: cimg/node:14.18.1
     steps:
       - checkout
       - restore_cache:
