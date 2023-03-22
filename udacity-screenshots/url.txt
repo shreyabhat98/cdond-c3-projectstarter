@@ -1,0 +1,16 @@
+
+
+Url01- https://github.com/shreyabhat98/udapeople - Have created a new branch dev branch. (I deleted the previous branches because the screenshot asked for master.So, I have created one)
+
+Url02 - http://udapeople-2599fa4.s3-website-us-east-1.amazonaws.com 
+
+Url03 - d37vsq1zyd4bvj.cloudfront.net 
+
+Url04 - http://54.87.211.210:3030/api/status 
+
+
+Notes : 
+
+The two github repo was given previously because the previous one threw so many state errors towards the end and I wanted to start fresh so used a new link . 
+
+My AWS services are not working and I have raised a ticket. Unless I have it back, I can't work on anything. I have rechecked all the screenshots. s3 screenshot is there, have included a circleci screenshot with my name.
